@@ -48,3 +48,44 @@ describe('Hub pub/sub', () => {
     expect(hub.roomCount()).toBe(2)
   })
 })
+
+describe('Hub reverse channel and lifecycle', () => {
+  it('forwards a subscriber frame to publishers, not to other subscribers', () => {
+    const hub = new Hub(counter())
+    const pubGot: string[] = []
+    const sub2Got: string[] = []
+    hub.addClient('t', 'pub', (d) => pubGot.push(d))
+    const sub1 = hub.addClient('t', 'sub', () => {})
+    hub.addClient('t', 'sub', (d) => sub2Got.push(d))
+
+    hub.handleMessage(sub1, JSON.stringify({ cmd: 'completeReminder', id: 'x1' }))
+
+    expect(pubGot).toEqual([JSON.stringify({ cmd: 'completeReminder', id: 'x1' })])
+    expect(sub2Got).toEqual([])
+  })
+
+  it('drops malformed (non-JSON) frames without storing or forwarding', () => {
+    const hub = new Hub(counter())
+    const subGot: string[] = []
+    const pub = hub.addClient('t', 'pub', () => {})
+    hub.addClient('t', 'sub', (d) => subGot.push(d))
+
+    hub.handleMessage(pub, 'not json {{{')
+
+    expect(subGot).toEqual([])
+    expect(hub.latestSnapshot('t')).toBeUndefined()
+  })
+
+  it('evicts the room once its last client leaves', () => {
+    const hub = new Hub(counter())
+    const pub = hub.addClient('t', 'pub', () => {})
+    const sub = hub.addClient('t', 'sub', () => {})
+    hub.handleMessage(pub, JSON.stringify({ cpu: 1 }))
+
+    hub.removeClient(pub)
+    expect(hub.roomCount()).toBe(1)
+    hub.removeClient(sub)
+    expect(hub.roomCount()).toBe(0)
+    expect(hub.latestSnapshot('t')).toBeUndefined()
+  })
+})

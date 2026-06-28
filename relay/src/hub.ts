@@ -36,11 +36,16 @@ export class Hub {
   handleMessage(clientId: string, raw: string): void {
     const found = this.findClient(clientId)
     if (!found) return
+    if (!isValidJson(raw)) return // drop malformed frames
     const { room, client } = found
     if (client.role === 'pub') {
       room.latest = raw
       for (const c of room.clients.values()) {
         if (c.role === 'sub') c.send(raw)
+      }
+    } else {
+      for (const c of room.clients.values()) {
+        if (c.role === 'pub') c.send(raw)
       }
     }
   }
@@ -53,6 +58,15 @@ export class Hub {
     return this.rooms.size
   }
 
+  removeClient(clientId: string): void {
+    for (const [token, room] of this.rooms) {
+      if (room.clients.delete(clientId)) {
+        if (room.clients.size === 0) this.rooms.delete(token)
+        return
+      }
+    }
+  }
+
   protected findClient(clientId: string): { room: Room; client: Client } | undefined {
     for (const room of this.rooms.values()) {
       const client = room.clients.get(clientId)
@@ -63,5 +77,14 @@ export class Hub {
 
   protected get roomsMap(): Map<string, Room> {
     return this.rooms
+  }
+}
+
+function isValidJson(raw: string): boolean {
+  try {
+    JSON.parse(raw)
+    return true
+  } catch {
+    return false
   }
 }
