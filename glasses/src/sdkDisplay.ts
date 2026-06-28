@@ -39,6 +39,13 @@ export class SdkGlassesDisplay implements GlassesDisplay {
         yPosition: layout.yPosition,
         width: layout.width,
         height: layout.height,
+        // Explicitly borderless with no padding. Left unset, the host draws a
+        // default container divider — that's the stray dotted vertical line on
+        // the right edge — and reserves padding that vertically clipped the text.
+        borderWidth: 0,
+        borderColor: 0,
+        borderRadius: 0,
+        paddingLength: 0,
         content: '',
       })
     );
@@ -89,27 +96,44 @@ export class SdkGlassesDisplay implements GlassesDisplay {
 type RingEventType = 'scrollUp' | 'scrollDown' | 'click';
 
 /**
- * Subscribe to Even Ring hardware events via the bridge.
- * Maps SCROLL_TOP_EVENT → 'scrollUp', SCROLL_BOTTOM_EVENT → 'scrollDown', CLICK_EVENT → 'click'.
- * Ignores all other event types.
+ * Subscribe to Even Ring hardware events (and, optionally, lifecycle exit) via the bridge.
+ *
+ * Maps SCROLL_TOP_EVENT → 'scrollUp', SCROLL_BOTTOM_EVENT → 'scrollDown',
+ * CLICK_EVENT/DOUBLE_CLICK_EVENT → 'click'. FOREGROUND_EXIT_EVENT and
+ * SYSTEM_EXIT_EVENT call `onExit` (if provided).
+ *
+ * Everything goes through a SINGLE onEvenHubEvent registration. Registering the
+ * ring handler and a separate exit handler as two subscriptions risked one
+ * clobbering the other on hosts that keep a single callback — which is the most
+ * likely reason ring scrolls did nothing.
+ *
  * Returns an unsubscribe function.
  */
 export function subscribeRingEvents(
   bridge: EvenAppBridge,
-  handler: (e: RingEventType) => void
+  handler: (e: RingEventType) => void,
+  onExit?: () => void
 ): () => void {
   return bridge.onEvenHubEvent((event: EvenHubEvent) => {
     const sysEvent = event.sysEvent;
     if (!sysEvent) return;
 
-    const eventType = sysEvent.eventType;
-    if (eventType === OsEventTypeList.SCROLL_TOP_EVENT) {
-      handler('scrollUp');
-    } else if (eventType === OsEventTypeList.SCROLL_BOTTOM_EVENT) {
-      handler('scrollDown');
-    } else if (eventType === OsEventTypeList.CLICK_EVENT) {
-      handler('click');
+    switch (sysEvent.eventType) {
+      case OsEventTypeList.SCROLL_TOP_EVENT:
+        handler('scrollUp');
+        break;
+      case OsEventTypeList.SCROLL_BOTTOM_EVENT:
+        handler('scrollDown');
+        break;
+      case OsEventTypeList.CLICK_EVENT:
+      case OsEventTypeList.DOUBLE_CLICK_EVENT:
+        handler('click');
+        break;
+      case OsEventTypeList.FOREGROUND_EXIT_EVENT:
+      case OsEventTypeList.SYSTEM_EXIT_EVENT:
+        onExit?.();
+        break;
+      // FOREGROUND_ENTER, IMU_DATA_REPORT, etc. are ignored.
     }
-    // All other event types (FOREGROUND_ENTER, SYSTEM_EXIT, etc.) are ignored here.
   });
 }

@@ -41,3 +41,24 @@ export function trunc(s: string, n: number): string {
   if (s.length <= n) return s;
   return s.slice(0, n - 1) + '…';
 }
+
+// Eighth-width left blocks for sub-cell precision (1/8 … 8/8 of a cell filled).
+const EIGHTHS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
+
+/**
+ * Renders a horizontal bar meter for a 0..100 percentage, e.g. "▕████▌░░░░▏".
+ * - `cells` is the number of full-width cells between the end caps (default 6).
+ * - Uses partial eighth-blocks so the fill is smooth, not steppy.
+ * - Clamps the value to 0..100. Empty cells use '░' so the track is always visible.
+ * The returned string always has the same visual width (caps + `cells` glyphs).
+ */
+export function bar(value: number, cells = 6): string {
+  const clamped = Math.max(0, Math.min(100, value));
+  const totalEighths = Math.round((clamped / 100) * cells * 8);
+  let out = '';
+  for (let i = 0; i < cells; i++) {
+    const cellEighths = Math.max(0, Math.min(8, totalEighths - i * 8));
+    out += cellEighths === 8 ? '█' : cellEighths === 0 ? '░' : EIGHTHS[cellEighths];
+  }
+  return `▕${out}▏`;
+}

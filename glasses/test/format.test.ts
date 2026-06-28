@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { clock, pct, gb, kbps, trunc } from '../src/format.js';
+import { clock, pct, gb, kbps, trunc, bar } from '../src/format.js';
 
 describe('clock', () => {
   it('formats hours and minutes with zero-padding', () => {
@@ -113,5 +113,36 @@ describe('trunc', () => {
 
   it('handles n=1: returns ellipsis only', () => {
     expect(trunc('hello', 1)).toBe('…');
+  });
+});
+
+describe('bar', () => {
+  it('renders an empty track at 0%', () => {
+    expect(bar(0, 6)).toBe('▕░░░░░░▏');
+  });
+
+  it('renders a full track at 100%', () => {
+    expect(bar(100, 6)).toBe('▕██████▏');
+  });
+
+  it('clamps values above 100', () => {
+    expect(bar(150, 6)).toBe('▕██████▏');
+  });
+
+  it('clamps negative values to empty', () => {
+    expect(bar(-20, 6)).toBe('▕░░░░░░▏');
+  });
+
+  it('fills exactly half the cells at 50%', () => {
+    expect(bar(50, 6)).toBe('▕███░░░▏');
+  });
+
+  it('always returns caps plus the requested number of cells', () => {
+    // 2 caps + 8 cells = 10 visual glyphs
+    expect([...bar(37, 8)].length).toBe(10);
+  });
+
+  it('defaults to 6 cells', () => {
+    expect([...bar(50)].length).toBe(8);
   });
 });

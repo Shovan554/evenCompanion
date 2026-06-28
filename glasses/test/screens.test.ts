@@ -83,9 +83,16 @@ describe('renderScreen vitals', () => {
     expect(lines.some(l => l.startsWith('RAM') && l.includes('11G') && l.includes('16G'))).toBe(true);
   });
 
-  it('shows DISK free line', () => {
+  it('shows DISK line with free space', () => {
     const lines = renderScreen('vitals', baseSnap);
-    expect(lines.some(l => l.startsWith('DISK') && l.includes('142G') && l.includes('free'))).toBe(true);
+    expect(lines.some(l => l.startsWith('DISK') && l.includes('142G'))).toBe(true);
+  });
+
+  it('renders a bar meter on the CPU line', () => {
+    const lines = renderScreen('vitals', baseSnap);
+    const cpuLine = lines.find(l => l.startsWith('CPU'));
+    expect(cpuLine).toBeDefined();
+    expect(cpuLine).toMatch(/▕[█▏▎▍▌▋▊▉░]+▏/);
   });
 
   it('shows SSD health line', () => {
@@ -198,7 +205,7 @@ describe('renderScreen ports', () => {
     expect(lines).toEqual(['No open ports']);
   });
 
-  it('caps at 6 ports and shows +N more', () => {
+  it('caps at 5 rows and shows +N more', () => {
     const snap: Snapshot = {
       ...baseSnap,
       ports: [
@@ -213,10 +220,10 @@ describe('renderScreen ports', () => {
       ],
     };
     const lines = renderScreen('ports', snap);
-    expect(lines.length).toBeLessThanOrEqual(7);
-    // 6 port lines + "+2 more"
-    expect(lines[lines.length - 1]).toBe('+2 more');
-    expect(lines.filter(l => !l.startsWith('+'))).toHaveLength(6);
+    expect(lines.length).toBe(5);
+    // 4 port lines + "+4 more"
+    expect(lines[lines.length - 1]).toBe('+4 more');
+    expect(lines.filter(l => !l.startsWith('+'))).toHaveLength(4);
   });
 
   it('truncates proc to 12 chars', () => {
@@ -292,7 +299,7 @@ describe('renderScreen reminders', () => {
     }));
     const snap: Snapshot = { ...baseSnap, reminders };
     const lines = renderScreen('reminders', snap, { selectedIndex: 0 });
-    expect(lines.length).toBeLessThanOrEqual(7);
-    expect(lines[lines.length - 1]).toBe('+2 more');
+    expect(lines.length).toBe(5);
+    expect(lines[lines.length - 1]).toBe('+4 more');
   });
 });

@@ -56,7 +56,8 @@ export class AppState {
     }
     const currentKind = SCREENS[this.screenIndex];
     const contentLines = renderScreen(currentKind, this.last, { selectedIndex: this.selectedIndex });
-    const lines = [bar, ...contentLines].slice(0, 8);
+    // 6 containers total: 1 top bar + up to 5 content rows.
+    const lines = [bar, ...contentLines].slice(0, 6);
     return { lines };
   }
 }

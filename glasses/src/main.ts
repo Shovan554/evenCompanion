@@ -3,11 +3,7 @@
  * Wires the bridge, relay, state machine, and display together.
  */
 
-import {
-  waitForEvenAppBridge,
-  OsEventTypeList,
-  type EvenHubEvent,
-} from '@evenrealities/even_hub_sdk';
+import { waitForEvenAppBridge } from '@evenrealities/even_hub_sdk';
 
 import { parseSnapshot } from './snapshot.js';
 import { clock } from './format.js';
@@ -60,14 +56,27 @@ const DEFAULT_RELAY_WSS_URL = 'wss://maccompanion-relay.onrender.com';
     },
   });
 
-  // 5. Initialise the display (8 text containers: 1 top bar + 7 content lines).
-  await display.init(8);
+  // 5. Initialise the display (6 text containers: 1 top bar + 5 content lines).
+  //    Eight rows did not physically fit in the 144px canvas, which clipped text.
+  await display.init(6);
 
-  // 6. Subscribe to Ring events.
-  subscribeRingEvents(bridge, (e) => {
-    state.onRingEvent(e);
-    render();
-  });
+  // 8. 1-second timer to keep the clock and stale indicator up-to-date.
+  const timer = setInterval(render, 1000);
+
+  // 6 + 9. A single subscription handles both Ring navigation and lifecycle exit,
+  //    so the two never clobber each other.
+  subscribeRingEvents(
+    bridge,
+    (e) => {
+      state.onRingEvent(e);
+      render();
+    },
+    () => {
+      clearInterval(timer);
+      relay.close();
+      void display.shutdown();
+    }
+  );
 
   // 7. Start the relay connection — only when a URL is configured.
   if (!url) {
@@ -76,24 +85,6 @@ const DEFAULT_RELAY_WSS_URL = 'wss://maccompanion-relay.onrender.com';
   } else {
     relay.connect();
   }
-
-  // 8. 1-second timer to keep the clock and stale indicator up-to-date.
-  const timer = setInterval(render, 1000);
-
-  // 9. Listen for foreground-exit / system-exit to clean up.
-  bridge.onEvenHubEvent((event: EvenHubEvent) => {
-    const sysEvent = event.sysEvent;
-    if (!sysEvent) return;
-    const et = sysEvent.eventType;
-    if (
-      et === OsEventTypeList.FOREGROUND_EXIT_EVENT ||
-      et === OsEventTypeList.SYSTEM_EXIT_EVENT
-    ) {
-      clearInterval(timer);
-      relay.close();
-      void display.shutdown();
-    }
-  });
 
   // Initial render.
   render();
