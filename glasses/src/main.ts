@@ -22,11 +22,13 @@ const DEFAULT_RELAY_WSS_URL = 'wss://maccompanion-relay.onrender.com';
   // 1. Wait for the bridge to be ready. SDK returns the bridge instance.
   const bridge = await waitForEvenAppBridge();
 
-  // 2. Read config from local storage (user sets these in the Even Hub app).
+  // 2. Read config. Precedence: URL query params (so a single pasted dev URL can
+  //    carry everything) > Even Hub local storage > built-in default.
+  const params = new URLSearchParams(location.search);
   const storedUrl = await bridge.getLocalStorage('relayUrl');
   const storedToken = await bridge.getLocalStorage('relayToken');
-  const url = storedUrl || DEFAULT_RELAY_WSS_URL;
-  const token = storedToken || '';
+  const url = params.get('relayUrl') || storedUrl || DEFAULT_RELAY_WSS_URL;
+  const token = params.get('token') || params.get('relayToken') || storedToken || '';
 
   // 3. Build the display adapter.
   const display = new SdkGlassesDisplay(bridge);
