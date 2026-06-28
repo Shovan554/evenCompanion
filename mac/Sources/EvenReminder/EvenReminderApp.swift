@@ -7,7 +7,9 @@ struct EvenReminderApp: App {
     @StateObject private var model = AppModel()
 
     init() {
-        NSApp.setActivationPolicy(.accessory)
+        // Use NSApplication.shared (lazily creates the instance); the global
+        // NSApp is still nil this early in the SwiftUI App lifecycle.
+        NSApplication.shared.setActivationPolicy(.accessory)
     }
 
     var body: some Scene {
