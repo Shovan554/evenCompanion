@@ -40,9 +40,15 @@ export function createRelayServer(opts: { authToken?: string } = {}) {
     const id = hub.addClient(token, role as Role, (data) => {
       if (ws.readyState === ws.OPEN) ws.send(data)
     })
+    let removed = false
+    const remove = () => {
+      if (removed) return
+      removed = true
+      hub.removeClient(id)
+    }
     ws.on('message', (data) => hub.handleMessage(id, data.toString()))
-    ws.on('close', () => hub.removeClient(id))
-    ws.on('error', () => hub.removeClient(id))
+    ws.on('close', remove)
+    ws.on('error', remove)
   })
 
   return {

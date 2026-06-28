@@ -28,6 +28,12 @@ describe('relay server', () => {
     expect(await res.text()).toBe('ok')
   })
 
+  it('returns 404 for unknown routes', async () => {
+    server = await createRelayServer().listen(0)
+    const res = await fetch(`http://localhost:${server.port}/nope`)
+    expect(res.status).toBe(404)
+  })
+
   it('forwards a publisher snapshot to a subscriber', async () => {
     server = await createRelayServer().listen(0)
     const sub = await connect(server.port, 'sub')
