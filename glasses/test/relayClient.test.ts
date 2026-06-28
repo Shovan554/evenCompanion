@@ -275,4 +275,34 @@ describe('RelayClient', () => {
     client.close()
     expect(sockets[0].closed).toBe(true)
   })
+
+  it('onerror then onclose on the same socket fires exactly ONE reconnect and ONE backoff increment', () => {
+    const sockets: FakeSocket[] = []
+    const reconnectLog: { attempt: number }[] = []
+    const client = new RelayClient({
+      url: 'wss://relay.example',
+      token: 'secret',
+      onSnapshot: () => {},
+      socketFactory: makeFactory(sockets),
+      // Use a scheduler that records but does NOT invoke fn immediately,
+      // so we can count scheduleReconnect calls without triggering more connects.
+      scheduleReconnect: (fn, attempt) => {
+        reconnectLog.push({ attempt })
+        // do not call fn — we just want to count invocations
+      },
+    })
+    client.connect()
+    sockets[0].onopen?.()
+
+    // Simulate browser firing onerror then onclose for the same failure
+    sockets[0].onerror?.()
+    sockets[0].onclose?.()
+
+    // Should have scheduled exactly ONE reconnect
+    expect(reconnectLog.length).toBe(1)
+    // Factory should NOT have been called again (scheduler didn't invoke fn)
+    expect(sockets.length).toBe(1)
+    // Attempt counter incremented exactly once
+    expect(reconnectLog[0].attempt).toBe(0)
+  })
 })

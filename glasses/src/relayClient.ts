@@ -65,6 +65,9 @@ export class RelayClient {
     this.socket = socket
     this.isOpen = false
 
+    // Guard: ensure onerror + onclose for the same socket only trigger once.
+    let disconnected = false
+
     socket.onopen = () => {
       this.isOpen = true
       this.attempt = 0
@@ -76,6 +79,8 @@ export class RelayClient {
     }
 
     const handleDisconnect = () => {
+      if (disconnected) return
+      disconnected = true
       this.isOpen = false
       this.onStatusChange?.('disconnected')
       if (!this.closed) {

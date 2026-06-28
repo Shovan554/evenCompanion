@@ -39,7 +39,11 @@ const DEFAULT_RELAY_WSS_URL = '';
   });
 
   function render(): void {
-    void display.setLines(state.view(Date.now(), clock(new Date())).lines);
+    try {
+      void display.setLines(state.view(Date.now(), clock(new Date())).lines);
+    } catch (err) {
+      console.warn('[even-stats] render error suppressed:', err);
+    }
   }
 
   relay = new RelayClient({
@@ -63,8 +67,13 @@ const DEFAULT_RELAY_WSS_URL = '';
     render();
   });
 
-  // 7. Start the relay connection.
-  relay.connect();
+  // 7. Start the relay connection — only when a URL is configured.
+  if (!url) {
+    console.warn('[even-stats] relayUrl is unconfigured — skipping WebSocket connection');
+    render();
+  } else {
+    relay.connect();
+  }
 
   // 8. 1-second timer to keep the clock and stale indicator up-to-date.
   const timer = setInterval(render, 1000);
