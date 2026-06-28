@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type Server } from 'node:http'
+import { createHash } from 'node:crypto'
 import { WebSocketServer, type WebSocket } from 'ws'
 import { Hub, type Role } from './hub'
 import { RELAY_NAME, RELAY_BUILD } from './version'
@@ -19,7 +20,16 @@ export function createRelayServer(opts: { authToken?: string } = {}) {
     }
     if (req.method === 'GET' && req.url === '/version') {
       res.writeHead(200, { 'content-type': 'application/json' })
-      res.end(JSON.stringify({ name: RELAY_NAME, build: RELAY_BUILD, auth: Boolean(opts.authToken) }))
+      const tokenHash = opts.authToken
+        ? createHash('sha256').update(opts.authToken).digest('hex').slice(0, 12)
+        : null
+      res.end(JSON.stringify({
+        name: RELAY_NAME,
+        build: RELAY_BUILD,
+        auth: Boolean(opts.authToken),
+        tokenLen: opts.authToken ? opts.authToken.length : 0,
+        tokenHash,
+      }))
       return
     }
     res.writeHead(404)
