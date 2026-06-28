@@ -1,0 +1,77 @@
+import { createServer, type IncomingMessage, type Server } from 'node:http'
+import { WebSocketServer, type WebSocket } from 'ws'
+import { Hub, type Role } from './hub'
+
+export interface RelayServer {
+  port: number
+  close(): Promise<void>
+}
+
+export function createRelayServer(opts: { authToken?: string } = {}) {
+  const hub = new Hub()
+
+  const http: Server = createServer((req, res) => {
+    if (req.method === 'GET' && req.url === '/healthz') {
+      res.writeHead(200, { 'content-type': 'text/plain' })
+      res.end('ok')
+      return
+    }
+    res.writeHead(404)
+    res.end()
+  })
+
+  const wss = new WebSocketServer({ server: http, path: '/ws' })
+
+  wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+    const url = new URL(req.url ?? '', 'http://localhost')
+    const token = url.searchParams.get('token') ?? ''
+    const role = url.searchParams.get('role')
+
+    const authorized =
+      token.length > 0 &&
+      (role === 'pub' || role === 'sub') &&
+      (!opts.authToken || token === opts.authToken)
+
+    if (!authorized) {
+      ws.close(1008, 'unauthorized')
+      return
+    }
+
+    const id = hub.addClient(token, role as Role, (data) => {
+      if (ws.readyState === ws.OPEN) ws.send(data)
+    })
+    let removed = false
+    const remove = () => {
+      if (removed) return
+      removed = true
+      hub.removeClient(id)
+    }
+    ws.on('message', (data) => hub.handleMessage(id, data.toString()))
+    ws.on('close', remove)
+    ws.on('error', remove)
+  })
+
+  return {
+    listen(port: number): Promise<RelayServer> {
+      return new Promise((resolve) => {
+        http.listen(port, () => {
+          const addr = http.address()
+          const actualPort = typeof addr === 'object' && addr ? addr.port : port
+          resolve({
+            port: actualPort,
+            close: async () => {
+              // Force close all WebSocket connections
+              for (const client of wss.clients) {
+                client.close()
+              }
+              // Close the WebSocket server
+              await new Promise<void>((res) => wss.close(() => res()))
+              // Close the HTTP server
+              await new Promise<void>((res) => http.close(() => res()))
+            },
+          })
+        })
+      })
+    },
+  }
+}

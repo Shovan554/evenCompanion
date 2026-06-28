@@ -133,8 +133,13 @@ within the 8-text-field budget for each screen's content.
 - **Reminders module** — EventKit: read upcoming, complete by id.
 - **Publisher** — reconnecting `URLSessionWebSocketTask` to the relay; sends snapshots,
   receives reverse commands and applies them (e.g. complete a reminder).
-- **Menu bar UI** — `MenuBarExtra` with always-on app icon: add a reminder, see relay /
-  glasses connection status, settings (relay URL, token, which screens/stats enabled).
+- **Menu bar UI** — the single app presents **two** separate menu bar items (both
+  `MenuBarExtra` scenes, always-on icons):
+  1. **Reminders** item — quick-add a reminder, view upcoming, see which were completed
+     from the glasses.
+  2. **Settings / Control** item — relay URL + secret token, connection status (relay +
+     glasses), which screens/stats are enabled, launch-at-login toggle, and a
+     publish/pause switch.
 - **Launch at login** via `SMAppService`.
 
 ### 6.3 even-stats (TypeScript WebView, `@evenrealities/even_hub_sdk`)
