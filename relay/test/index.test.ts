@@ -18,4 +18,10 @@ describe('main', () => {
   it('rejects a non-numeric PORT', async () => {
     await expect(main({ PORT: 'banana' } as NodeJS.ProcessEnv)).rejects.toThrow(/Invalid PORT/)
   })
+
+  it('requires RELAY_TOKEN when NODE_ENV is production', async () => {
+    await expect(
+      main({ PORT: '0', NODE_ENV: 'production' } as NodeJS.ProcessEnv),
+    ).rejects.toThrow(/RELAY_TOKEN/)
+  })
 })

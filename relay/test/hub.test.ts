@@ -89,3 +89,17 @@ describe('Hub reverse channel and lifecycle', () => {
     expect(hub.latestSnapshot('t')).toBeUndefined()
   })
 })
+
+describe('Hub frame-size guard', () => {
+  it('drops frames larger than the configured max without storing or forwarding', () => {
+    const hub = new Hub(counter(), 16) // 16-byte cap
+    const subGot: string[] = []
+    const pub = hub.addClient('t', 'pub', () => {})
+    hub.addClient('t', 'sub', (d) => subGot.push(d))
+
+    hub.handleMessage(pub, JSON.stringify({ big: 'xxxxxxxxxxxxxxxxxxxxxxxx' }))
+
+    expect(subGot).toEqual([])
+    expect(hub.latestSnapshot('t')).toBeUndefined()
+  })
+})

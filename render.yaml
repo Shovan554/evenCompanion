@@ -10,5 +10,7 @@ services:
     healthCheckPath: /healthz
     autoDeploy: true
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: RELAY_TOKEN
         sync: false

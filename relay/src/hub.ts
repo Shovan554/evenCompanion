@@ -4,7 +4,6 @@ export type Role = 'pub' | 'sub'
 export type SendFn = (data: string) => void
 
 interface Client {
-  id: string
   role: Role
   send: SendFn
 }
@@ -17,7 +16,7 @@ interface Room {
 export class Hub {
   private rooms = new Map<string, Room>()
 
-  constructor(private idFactory: () => string = randomUUID) {}
+  constructor(private idFactory: () => string = randomUUID, private maxFrameBytes = 256 * 1024) {}
 
   addClient(token: string, role: Role, send: SendFn): string {
     const id = this.idFactory()
@@ -26,7 +25,7 @@ export class Hub {
       room = { clients: new Map() }
       this.rooms.set(token, room)
     }
-    room.clients.set(id, { id, role, send })
+    room.clients.set(id, { role, send })
     if (role === 'sub' && room.latest !== undefined) {
       send(room.latest)
     }
@@ -36,6 +35,7 @@ export class Hub {
   handleMessage(clientId: string, raw: string): void {
     const found = this.findClient(clientId)
     if (!found) return
+    if (Buffer.byteLength(raw, 'utf8') > this.maxFrameBytes) return
     if (!isValidJson(raw)) return // drop malformed frames
     const { room, client } = found
     if (client.role === 'pub') {
@@ -75,9 +75,6 @@ export class Hub {
     return undefined
   }
 
-  protected get roomsMap(): Map<string, Room> {
-    return this.rooms
-  }
 }
 
 function isValidJson(raw: string): boolean {

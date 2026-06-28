@@ -19,3 +19,10 @@ JSON but does not interpret their contents.
 ## Environment
 - `PORT` — listen port (Render injects this; default 8080).
 - `RELAY_TOKEN` — if set, only this token is accepted; otherwise any token is a room.
+
+## Security
+The `token` is the relay's entire security boundary: knowing a room's token grants
+read of its snapshots and the ability to send commands to its publisher. Use a long,
+random token. In production (`NODE_ENV=production`) the server refuses to start unless
+`RELAY_TOKEN` is set. Note: Render's free tier sleeps idle services; the Mac publisher's
+persistent connection keeps it warm while running.
