@@ -6,7 +6,9 @@ export async function main(env: NodeJS.ProcessEnv): Promise<RelayServer> {
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
     throw new Error(`Invalid PORT: ${env.PORT}`)
   }
-  const authToken = env.RELAY_TOKEN || undefined
+  // Trim: pasting the token into a dashboard env var commonly appends a trailing
+  // newline/space, which would silently reject every (correctly-tokened) client.
+  const authToken = env.RELAY_TOKEN?.trim() || undefined
   if (env.NODE_ENV === 'production' && !authToken) {
     throw new Error('RELAY_TOKEN must be set in production (the token is the relay\'s only security boundary)')
   }
