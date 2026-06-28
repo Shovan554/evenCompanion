@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Top-level Snapshot
 
-public struct Snapshot: Codable, Equatable {
+public struct Snapshot: Codable, Equatable, Sendable {
     public var ts: Int
     public var host: String
     public var vitals: Vitals
@@ -22,7 +22,7 @@ public struct Snapshot: Codable, Equatable {
 
 // MARK: - Vitals
 
-public struct Vitals: Equatable {
+public struct Vitals: Equatable, Sendable {
     public var cpu: Double
     public var ramUsedGB: Double
     public var ramTotalGB: Double
@@ -78,7 +78,7 @@ extension Vitals: Codable {
 
 // MARK: - NetProc
 
-public struct NetProc: Equatable {
+public struct NetProc: Equatable, Sendable {
     public var upKBs: Double
     public var downKBs: Double
     public var topProc: TopProc?   // must encode as null when nil
@@ -117,7 +117,7 @@ extension NetProc: Codable {
 
 // MARK: - TopProc
 
-public struct TopProc: Codable, Equatable {
+public struct TopProc: Codable, Equatable, Sendable {
     public var name: String
     public var cpu: Double
 
@@ -129,7 +129,7 @@ public struct TopProc: Codable, Equatable {
 
 // MARK: - Battery
 
-public struct Battery: Codable, Equatable {
+public struct Battery: Codable, Equatable, Sendable {
     public var pct: Int
     public var charging: Bool
 
@@ -141,7 +141,7 @@ public struct Battery: Codable, Equatable {
 
 // MARK: - Port
 
-public struct Port: Codable, Equatable {
+public struct Port: Codable, Equatable, Sendable {
     public var port: Int
     public var proc: String
 
@@ -153,7 +153,7 @@ public struct Port: Codable, Equatable {
 
 // MARK: - Reminder
 
-public struct Reminder: Equatable {
+public struct Reminder: Equatable, Sendable {
     public var id: String
     public var title: String
     public var due: Int?   // must encode as null when nil

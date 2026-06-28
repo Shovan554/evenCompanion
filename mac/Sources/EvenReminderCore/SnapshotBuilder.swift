@@ -19,7 +19,7 @@ public struct NetSample: Sendable {
 
 /// Builds a `Snapshot` by running CLI commands via an injected `CommandRunner`.
 /// Pure side-effects are confined to the runner; all parsing is done by the functions in Parsers.swift.
-public struct SnapshotBuilder {
+public struct SnapshotBuilder: Sendable {
     let runner:        CommandRunner
     let memTotalBytes: UInt64
     let pageSize:      Int
