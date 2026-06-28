@@ -15,8 +15,8 @@ import { AppState } from './state.js';
 import { RelayClient } from './relayClient.js';
 import { SdkGlassesDisplay, subscribeRingEvents } from './sdkDisplay.js';
 
-/** Configure via Even Hub local storage key 'relayUrl'. */
-const DEFAULT_RELAY_WSS_URL = '';
+/** Configure via Even Hub local storage key 'relayUrl'. Defaults to the deployed relay. */
+const DEFAULT_RELAY_WSS_URL = 'wss://maccompanion-relay.onrender.com';
 
 (async () => {
   // 1. Wait for the bridge to be ready. SDK returns the bridge instance.
