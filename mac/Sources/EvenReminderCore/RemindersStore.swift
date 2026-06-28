@@ -15,6 +15,7 @@ public protocol RemindersProviding: Sendable {
     func requestAccess() async -> Bool
     func upcoming(limit: Int) async -> [Reminder]
     func complete(id: String) async
+    func add(title: String) async
 }
 
 // MARK: - EventKit implementation
@@ -92,8 +93,6 @@ public final class EventKitRemindersStore: RemindersProviding, @unchecked Sendab
             calendars: calendars.isEmpty ? nil : calendars
         )
 
-        // Capture the target EKReminder inside the callback (stays on EventKit's thread)
-        nonisolated(unsafe) var targetToSave: EKReminder? = nil
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             store.fetchReminders(matching: predicate) { [weak self] results in
                 guard let self = self else { continuation.resume(); return }
@@ -101,10 +100,15 @@ public final class EventKitRemindersStore: RemindersProviding, @unchecked Sendab
                     target.isCompleted = true
                     try? self.store.save(target, commit: true)
                 }
-                targetToSave = nil  // consumed
                 continuation.resume()
             }
         }
-        _ = targetToSave // suppress unused warning
+    }
+
+    public func add(title: String) async {
+        let reminder = EKReminder(eventStore: store)
+        reminder.title = title
+        reminder.calendar = store.defaultCalendarForNewReminders()
+        try? store.save(reminder, commit: true)
     }
 }

@@ -193,10 +193,9 @@ extension Reminder: Codable {
 // MARK: - Helper
 
 /// Encodes a Snapshot to a JSON string using sorted keys for stable output.
+/// Returns "{}" on the impossible encoding failure.
 public func snapshotJSON(_ s: Snapshot) -> String {
     let encoder = JSONEncoder()
     encoder.outputFormatting = .sortedKeys
-    // swiftlint:disable:next force_try
-    let data = try! encoder.encode(s)
-    return String(data: data, encoding: .utf8)!
+    return (try? encoder.encode(s)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
 }

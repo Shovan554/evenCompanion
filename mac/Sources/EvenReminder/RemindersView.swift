@@ -11,9 +11,10 @@ struct RemindersView: View {
                 TextField("New reminder…", text: $newTitle)
                     .textFieldStyle(.roundedBorder)
                 Button("Add") {
-                    guard !newTitle.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-                    model.addReminder(title: newTitle)
+                    let t = newTitle.trimmingCharacters(in: .whitespaces)
+                    guard !t.isEmpty else { return }
                     newTitle = ""
+                    Task { await model.addReminder(title: t) }
                 }
                 .disabled(newTitle.trimmingCharacters(in: .whitespaces).isEmpty)
             }

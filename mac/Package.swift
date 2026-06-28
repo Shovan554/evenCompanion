@@ -14,7 +14,15 @@ let package = Package(
         .executableTarget(
             name: "EvenReminder",
             dependencies: ["EvenReminderCore"],
-            path: "Sources/EvenReminder"
+            path: "Sources/EvenReminder",
+            linkerSettings: [
+                .unsafeFlags([
+                    "-Xlinker", "-sectcreate",
+                    "-Xlinker", "__TEXT",
+                    "-Xlinker", "__info_plist",
+                    "-Xlinker", "Sources/EvenReminder/Info.plist",
+                ])
+            ]
         ),
         .testTarget(
             name: "EvenReminderCoreTests",

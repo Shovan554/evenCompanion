@@ -14,6 +14,7 @@ final class AppModel: ObservableObject {
     private let builder: SnapshotBuilder
     private var publisher: any RelayPublishing
     private var remindersStore: any RemindersProviding
+    let makePublisher: (AppConfig) -> any RelayPublishing
 
     @Published var connectionStatus: String = "Disconnected"
     @Published var reminders: [Reminder] = []
@@ -28,7 +29,8 @@ final class AppModel: ObservableObject {
     init(
         config: AppConfig = AppConfig(),
         remindersStore: (any RemindersProviding)? = nil,
-        publisher: (any RelayPublishing)? = nil
+        publisher: (any RelayPublishing)? = nil,
+        makePublisher: ((AppConfig) -> any RelayPublishing)? = nil
     ) {
         self.config = config
         self.builder = SnapshotBuilder(runner: SystemCommandRunner())
@@ -40,7 +42,11 @@ final class AppModel: ObservableObject {
         let store = remindersStore ?? EventKitRemindersStore()
         self.remindersStore = store
 
-        let pub = publisher ?? WebSocketRelayPublisher(base: config.relayUrl, token: config.relayToken)
+        let factory: (AppConfig) -> any RelayPublishing = makePublisher
+            ?? { cfg in WebSocketRelayPublisher(base: cfg.relayUrl, token: cfg.relayToken) }
+        self.makePublisher = factory
+
+        let pub = publisher ?? factory(config)
         self.publisher = pub
 
         // Wire up command handler
@@ -108,8 +114,12 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func addReminder(title: String) {
-        // RemindersProviding protocol doesn't expose addReminder; no-op
+    func addReminder(title: String) async {
+        let trimmed = title.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        await remindersStore.add(title: trimmed)
+        let fetched = await remindersStore.upcoming(limit: 10)
+        self.reminders = fetched
     }
 
     func toggleLaunchAtLogin() {
@@ -127,9 +137,9 @@ final class AppModel: ObservableObject {
         config.publishEnabled = publishEnabled
         config.screensEnabled = screensEnabled
 
-        // Stop old publisher, create new one with updated URL/token
+        // Stop old publisher, create new one with updated URL/token via factory
         publisher.stop()
-        let newPub = WebSocketRelayPublisher(base: relayUrl, token: relayToken)
+        let newPub = makePublisher(config)
         newPub.onCommand = { [weak newPub] text in
             guard newPub != nil else { return }
             Task { @MainActor [weak self] in

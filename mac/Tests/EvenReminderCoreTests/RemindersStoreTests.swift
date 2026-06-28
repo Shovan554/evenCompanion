@@ -30,6 +30,10 @@ final class FakeRemindersStore: RemindersProviding, @unchecked Sendable {
     func complete(id: String) async {
         completedIDs.insert(id)
     }
+
+    func add(title: String) async {
+        items.append(Reminder(id: UUID().uuidString, title: title, due: nil, overdue: false))
+    }
 }
 
 // MARK: - isOverdue tests
@@ -109,5 +113,13 @@ final class FakeRemindersStoreTests: XCTestCase {
         let store = FakeRemindersStore()
         let result = await store.requestAccess()
         XCTAssertTrue(result)
+    }
+
+    func testAdd_appendsReminderToUpcoming() async {
+        let store = FakeRemindersStore()
+        await store.add(title: "Buy milk")
+        let upcoming = await store.upcoming(limit: 10)
+        XCTAssertEqual(upcoming.count, 1)
+        XCTAssertEqual(upcoming[0].title, "Buy milk")
     }
 }

@@ -187,8 +187,8 @@ public func parseNetstat(_ text: String) -> (inBytes: UInt64, outBytes: UInt64) 
         // Only process <Link#N> rows
         guard parts.contains(where: { $0.hasPrefix("<Link#") }) else { continue }
 
-        // Exclude loopback
-        guard !ifName.hasPrefix("lo") else { continue }
+        // Exclude loopback (only lo0 exactly; hypothetical lon0 etc. are counted)
+        guard ifName != "lo0" else { continue }
 
         // First occurrence only
         guard seenInterfaces.insert(ifName).inserted else { continue }
@@ -240,20 +240,26 @@ public func parsePmsetBattery(_ text: String) -> Battery? {
         return nil
     }
 
-    // charging if the first line says 'AC Power', or the battery state token is "charging"/"charged"
-    // (the state token appears between semicolons, e.g. "87%; charging; 1:22 remaining")
-    // We must NOT match "discharging" which also contains "charging".
-    let firstLine = lines.first ?? ""
-    let acPower   = firstLine.lowercased().contains("ac power")
-
     // Extract the semicolon-separated state token (e.g. "charging", "charged", "discharging")
     // Battery line format: "-InternalBattery-0 (id=...) XX%; STATE; ..."
+    // Derive charging from the state token first; fall back to AC Power header only if no
+    // recognizable state token is present (so "AC Power" + "discharging" → charging: false).
     var stateToken = ""
     let tokens = battLine.components(separatedBy: ";")
     if tokens.count >= 2 {
         stateToken = tokens[1].trimmingCharacters(in: .whitespaces).lowercased()
     }
-    let isCharging = acPower || stateToken == "charging" || stateToken == "charged"
+
+    let isCharging: Bool
+    if stateToken == "charging" || stateToken == "charged" {
+        isCharging = true
+    } else if stateToken == "discharging" || stateToken == "finishing charge" {
+        isCharging = false
+    } else {
+        // No recognizable state token — fall back to AC Power header
+        let firstLine = lines.first ?? ""
+        isCharging = firstLine.lowercased().contains("ac power")
+    }
 
     return Battery(pct: pct, charging: isCharging)
 }

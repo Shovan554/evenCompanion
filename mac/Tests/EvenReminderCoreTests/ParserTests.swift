@@ -371,6 +371,19 @@ utun5      1380  shovans-mac fe80:19::97db:cc1        0     -          0      22
         XCTAssertEqual(inBytes, 0)
         XCTAssertEqual(outBytes, 0)
     }
+
+    func testParseNetstat_lo0ExcludedButLon0Counted() {
+        // lo0 must be excluded; a hypothetical lon0 interface (name != "lo0") must be counted.
+        let fixture = """
+Name       Mtu   Network       Address            Ipkts Ierrs     Ibytes    Opkts Oerrs     Obytes  Coll
+lo0        16384 <Link#1>                       1000     0    500000     1000     0    500000     0
+lon0       1500  <Link#2>                        100     0    100000      100     0    100000     0
+"""
+        let (inBytes, outBytes) = parseNetstat(fixture)
+        // lo0 excluded, lon0 counted
+        XCTAssertEqual(inBytes,  100_000)
+        XCTAssertEqual(outBytes, 100_000)
+    }
 }
 
 // MARK: - parsePmsetBattery
@@ -425,6 +438,17 @@ Now drawing from 'AC Power'
 
     func testParsePmsetBattery_emptyInput_returnsNil() {
         XCTAssertNil(parsePmsetBattery(""))
+    }
+
+    func testParsePmsetBattery_acPowerHeaderWithDischarging_isNotCharging() {
+        // AC Power header but battery line says "discharging" — state token wins → charging: false
+        let acWithDischarge = """
+Now drawing from 'AC Power'
+ -InternalBattery-0 (id=12345678)\t87%; discharging; 3:45 remaining present: true
+"""
+        let battery = parsePmsetBattery(acWithDischarge)
+        XCTAssertNotNil(battery)
+        XCTAssertEqual(battery?.charging, false)
     }
 }
 

@@ -78,6 +78,7 @@ public final class WebSocketRelayPublisher: RelayPublishing, @unchecked Sendable
             guard let self = self, !self.stopped else { return }
             switch result {
             case .success(let msg):
+                self.attempt = 0
                 if case .string(let text) = msg {
                     self.onCommand?(text)
                 }
