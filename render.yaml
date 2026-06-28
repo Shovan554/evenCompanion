@@ -14,3 +14,13 @@ services:
         value: production
       - key: RELAY_TOKEN
         sync: false
+
+  # Static hosting for the glasses WebView page (even-stats). The Even App loads
+  # this URL into its WebView; the bundle inlines the Even Hub SDK.
+  - type: web
+    name: maccompanion-stats
+    runtime: static
+    rootDir: glasses
+    buildCommand: npm ci --include=dev && npm run build
+    staticPublishPath: ./dist
+    autoDeploy: true
