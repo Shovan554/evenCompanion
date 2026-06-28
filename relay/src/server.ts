@@ -26,7 +26,10 @@ export function createRelayServer(opts: { authToken?: string } = {}) {
     res.end()
   })
 
-  const wss = new WebSocketServer({ server: http, path: '/ws' })
+  // perMessageDeflate disabled: compressed server->client frames can be dropped
+  // by CDN/proxy layers (e.g. Render/Cloudflare), which silently breaks fan-out.
+  // Payloads are small JSON snapshots, so compression isn't worth the risk.
+  const wss = new WebSocketServer({ server: http, path: '/ws', perMessageDeflate: false })
 
   wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     const url = new URL(req.url ?? '', 'http://localhost')
