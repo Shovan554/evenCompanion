@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server } from 'node:http'
 import { WebSocketServer, type WebSocket } from 'ws'
 import { Hub, type Role } from './hub'
+import { RELAY_NAME, RELAY_BUILD } from './version'
 
 export interface RelayServer {
   port: number
@@ -14,6 +15,11 @@ export function createRelayServer(opts: { authToken?: string } = {}) {
     if (req.method === 'GET' && req.url === '/healthz') {
       res.writeHead(200, { 'content-type': 'text/plain' })
       res.end('ok')
+      return
+    }
+    if (req.method === 'GET' && req.url === '/version') {
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ name: RELAY_NAME, build: RELAY_BUILD, auth: Boolean(opts.authToken) }))
       return
     }
     res.writeHead(404)
