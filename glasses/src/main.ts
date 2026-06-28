@@ -1,2 +1,89 @@
-// Placeholder entry point — Task G4 will replace this with the full wiring.
-export {};
+/**
+ * main.ts — Even-stats WebView entry point.
+ * Wires the bridge, relay, state machine, and display together.
+ */
+
+import {
+  waitForEvenAppBridge,
+  OsEventTypeList,
+  type EvenHubEvent,
+} from '@evenrealities/even_hub_sdk';
+
+import { parseSnapshot } from './snapshot.js';
+import { clock } from './format.js';
+import { AppState } from './state.js';
+import { RelayClient } from './relayClient.js';
+import { SdkGlassesDisplay, subscribeRingEvents } from './sdkDisplay.js';
+
+/** Configure via Even Hub local storage key 'relayUrl'. */
+const DEFAULT_RELAY_WSS_URL = '';
+
+(async () => {
+  // 1. Wait for the bridge to be ready. SDK returns the bridge instance.
+  const bridge = await waitForEvenAppBridge();
+
+  // 2. Read config from local storage (user sets these in the Even Hub app).
+  const storedUrl = await bridge.getLocalStorage('relayUrl');
+  const storedToken = await bridge.getLocalStorage('relayToken');
+  const url = storedUrl || DEFAULT_RELAY_WSS_URL;
+  const token = storedToken || '';
+
+  // 3. Build the display adapter.
+  const display = new SdkGlassesDisplay(bridge);
+
+  // 4. Build relay first so the late-bound closure inside AppState can reference it.
+  let relay: RelayClient;
+
+  const state = new AppState({
+    sendCommand: (cmd) => relay.send(cmd),
+  });
+
+  function render(): void {
+    void display.setLines(state.view(Date.now(), clock(new Date())).lines);
+  }
+
+  relay = new RelayClient({
+    url,
+    token,
+    onSnapshot: (raw) => {
+      const snap = parseSnapshot(raw);
+      if (snap !== null) {
+        state.onSnapshot(snap, Date.now());
+      }
+      render();
+    },
+  });
+
+  // 5. Initialise the display (8 text containers: 1 top bar + 7 content lines).
+  await display.init(8);
+
+  // 6. Subscribe to Ring events.
+  subscribeRingEvents(bridge, (e) => {
+    state.onRingEvent(e);
+    render();
+  });
+
+  // 7. Start the relay connection.
+  relay.connect();
+
+  // 8. 1-second timer to keep the clock and stale indicator up-to-date.
+  const timer = setInterval(render, 1000);
+
+  // 9. Listen for foreground-exit / system-exit to clean up.
+  bridge.onEvenHubEvent((event: EvenHubEvent) => {
+    const sysEvent = event.sysEvent;
+    if (!sysEvent) return;
+    const et = sysEvent.eventType;
+    if (
+      et === OsEventTypeList.FOREGROUND_EXIT_EVENT ||
+      et === OsEventTypeList.SYSTEM_EXIT_EVENT
+    ) {
+      clearInterval(timer);
+      relay.close();
+      void display.shutdown();
+    }
+  });
+
+  // Initial render.
+  render();
+})();
