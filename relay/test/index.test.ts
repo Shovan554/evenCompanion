@@ -14,4 +14,8 @@ describe('main', () => {
     const res = await fetch(`http://localhost:${server.port}/healthz`)
     expect(await res.text()).toBe('ok')
   })
+
+  it('rejects a non-numeric PORT', async () => {
+    await expect(main({ PORT: 'banana' } as NodeJS.ProcessEnv)).rejects.toThrow(/Invalid PORT/)
+  })
 })

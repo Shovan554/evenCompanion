@@ -2,6 +2,9 @@ import { createRelayServer, type RelayServer } from './server'
 
 export async function main(env: NodeJS.ProcessEnv): Promise<RelayServer> {
   const port = Number(env.PORT ?? 8080)
+  if (!Number.isInteger(port) || port < 0 || port > 65535) {
+    throw new Error(`Invalid PORT: ${env.PORT}`)
+  }
   const authToken = env.RELAY_TOKEN || undefined
   const server = await createRelayServer({ authToken }).listen(port)
   console.log(`relay listening on :${server.port} (auth ${authToken ? 'on' : 'off'})`)
