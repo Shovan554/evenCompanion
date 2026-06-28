@@ -123,7 +123,7 @@ within the 8-text-field budget for each screen's content.
 - Fans out snapshots to all subscribers in the room; relays reverse commands back to
   the publisher.
 - Knows nothing about stats or reminders — pure transport.
-- Deployable to Fly.io / Railway / Render.
+- Deployed to **Render** (chosen host) as a small always-on web service.
 
 ### 6.2 even-reminder (Swift + SwiftUI macOS menu bar app)
 - **Collectors** — each stat source is its own small, testable function:
