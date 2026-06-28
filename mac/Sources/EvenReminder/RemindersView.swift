@@ -20,6 +20,14 @@ struct RemindersView: View {
             }
             .padding(.horizontal)
 
+            if let addError = model.addError {
+                Text(addError)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal)
+            }
+
             Divider()
 
             if model.reminders.isEmpty {

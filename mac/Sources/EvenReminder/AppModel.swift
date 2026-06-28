@@ -18,6 +18,8 @@ final class AppModel: ObservableObject {
 
     @Published var connectionStatus: String = "Disconnected"
     @Published var reminders: [Reminder] = []
+    /// Last add-reminder error, surfaced in the UI. Nil when the last add succeeded.
+    @Published var addError: String?
     @Published var relayUrl: String
     @Published var relayToken: String
     @Published var publishEnabled: Bool
@@ -117,7 +119,20 @@ final class AppModel: ObservableObject {
     func addReminder(title: String) async {
         let trimmed = title.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
-        await remindersStore.add(title: trimmed)
+
+        // Make sure access is granted before trying to write — a denied/undetermined
+        // store is the most common reason an add silently does nothing.
+        let granted = await remindersStore.requestAccess()
+        guard granted else {
+            self.addError = "Reminders access not granted. Allow it in System Settings → Privacy & Security → Reminders."
+            return
+        }
+
+        if let error = await remindersStore.add(title: trimmed) {
+            self.addError = error
+            return
+        }
+        self.addError = nil
         let fetched = await remindersStore.upcoming(limit: 10)
         self.reminders = fetched
     }

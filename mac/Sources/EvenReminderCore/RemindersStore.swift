@@ -15,7 +15,8 @@ public protocol RemindersProviding: Sendable {
     func requestAccess() async -> Bool
     func upcoming(limit: Int) async -> [Reminder]
     func complete(id: String) async
-    func add(title: String) async
+    /// Adds a reminder. Returns `nil` on success, or a human-readable error message on failure.
+    func add(title: String) async -> String?
 }
 
 // MARK: - EventKit implementation
@@ -105,10 +106,26 @@ public final class EventKitRemindersStore: RemindersProviding, @unchecked Sendab
         }
     }
 
-    public func add(title: String) async {
+    public func add(title: String) async -> String? {
         let reminder = EKReminder(eventStore: store)
         reminder.title = title
-        reminder.calendar = store.defaultCalendarForNewReminders()
-        try? store.save(reminder, commit: true)
+
+        // Prefer the user's default reminders list; fall back to any writable
+        // reminders calendar. `defaultCalendarForNewReminders()` is nil when the
+        // user has no default list, which silently broke add before.
+        let calendar = store.defaultCalendarForNewReminders()
+            ?? store.calendars(for: .reminder).first(where: { $0.allowsContentModifications })
+
+        guard let calendar else {
+            return "No writable Reminders list found. Open the Reminders app, create a list, and make sure access is granted."
+        }
+        reminder.calendar = calendar
+
+        do {
+            try store.save(reminder, commit: true)
+            return nil
+        } catch {
+            return "Could not save reminder: \(error.localizedDescription)"
+        }
     }
 }

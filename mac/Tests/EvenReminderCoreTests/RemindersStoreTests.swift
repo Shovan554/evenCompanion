@@ -31,8 +31,9 @@ final class FakeRemindersStore: RemindersProviding, @unchecked Sendable {
         completedIDs.insert(id)
     }
 
-    func add(title: String) async {
+    func add(title: String) async -> String? {
         items.append(Reminder(id: UUID().uuidString, title: title, due: nil, overdue: false))
+        return nil
     }
 }
 
@@ -117,7 +118,8 @@ final class FakeRemindersStoreTests: XCTestCase {
 
     func testAdd_appendsReminderToUpcoming() async {
         let store = FakeRemindersStore()
-        await store.add(title: "Buy milk")
+        let err = await store.add(title: "Buy milk")
+        XCTAssertNil(err)
         let upcoming = await store.upcoming(limit: 10)
         XCTAssertEqual(upcoming.count, 1)
         XCTAssertEqual(upcoming[0].title, "Buy milk")
