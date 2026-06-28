@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: maccompanion-relay
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: RELAY_TOKEN
+        sync: false
